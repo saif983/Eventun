@@ -1,0 +1,420 @@
+<app-navbar></app-navbar>
+
+<div class="qr-ticket-container">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">
+        <i class="fas fa-calendar-plus text-purple-600 mr-3"></i>
+        Create Your Event
+      </h1>
+      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+        Create your event and generate tickets with QR codes instantly. Fill in your event details, set ticket pricing, and launch your event with professional tickets.
+      </p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <!-- Form Section -->
+      <div class="form-section">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+            <i class="fas fa-edit text-purple-600 mr-2"></i>
+            Event Details
+          </h2>
+
+          <form [formGroup]="ticketForm" (ngSubmit)="generateTickets()" class="space-y-6">
+            <!-- Event Information -->
+            <div class="form-group">
+              <label for="eventName" class="form-label">Event Name *</label>
+              <input 
+                type="text" 
+                id="eventName" 
+                formControlName="eventName"
+                class="form-input"
+                placeholder="Enter event name">
+              <div *ngIf="ticketForm.get('eventName')?.invalid && ticketForm.get('eventName')?.touched" class="error-message">
+                Event name is required and must be at least 3 characters.
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="form-group">
+                <label for="startDate" class="form-label">Start Date *</label>
+                <input 
+                  type="date" 
+                  id="startDate" 
+                  formControlName="startDate"
+                  class="form-input">
+                <div *ngIf="ticketForm.get('startDate')?.invalid && ticketForm.get('startDate')?.touched" class="error-message">
+                  Start date is required.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="endDate" class="form-label">End Date *</label>
+                <input 
+                  type="date" 
+                  id="endDate" 
+                  formControlName="endDate"
+                  class="form-input">
+                <div *ngIf="ticketForm.get('endDate')?.invalid && ticketForm.get('endDate')?.touched" class="error-message">
+                  End date is required.
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="eventLocation" class="form-label">Event Location *</label>
+              <input 
+                type="text" 
+                id="eventLocation" 
+                formControlName="eventLocation"
+                class="form-input"
+                placeholder="Enter event location">
+              <div *ngIf="ticketForm.get('eventLocation')?.invalid && ticketForm.get('eventLocation')?.touched" class="error-message">
+                Event location is required.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="eventCategory" class="form-label">Event Category *</label>
+              <select 
+                id="eventCategory" 
+                formControlName="eventCategory"
+                class="form-input">
+                <option value="Music">Music</option>
+                <option value="Sports">Sports</option>
+                <option value="Conference">Conference</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="eventDescription" class="form-label">Event Description *</label>
+              <textarea 
+                id="eventDescription" 
+                formControlName="eventDescription"
+                class="form-textarea"
+                rows="4"
+                placeholder="Describe your event..."></textarea>
+              <div *ngIf="ticketForm.get('eventDescription')?.invalid && ticketForm.get('eventDescription')?.touched" class="error-message">
+                Event description is required and must be at least 10 characters.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="eventOwner">Event Organizer *</label>
+              <input 
+                type="text" 
+                id="eventOwner" 
+                formControlName="eventOwner" 
+                class="form-control"
+                placeholder="Enter organizer name">
+              <div *ngIf="ticketForm.get('eventOwner')?.invalid && ticketForm.get('eventOwner')?.touched" class="error-message">
+                Event organizer is required
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="eventPhotoUrl" class="form-label">Event Photo URL</label>
+              <input 
+                type="url" 
+                id="eventPhotoUrl" 
+                formControlName="eventPhotoUrl"
+                (input)="onPhotoUrlInput($event)"
+                class="form-input"
+                placeholder="https://example.com/image.jpg">
+              <small class="text-gray-500">Provide an image URL (max 500 characters).</small>
+              <div *ngIf="ticketForm.get('eventPhotoUrl')?.hasError('maxlength') && ticketForm.get('eventPhotoUrl')?.touched" class="error-message">
+                URL must be 500 characters or less.
+              </div>
+              <div class="photo-preview" *ngIf="photoPreviewUrl">
+                <img [src]="photoPreviewUrl" alt="Event photo preview" class="preview-image" referrerpolicy="no-referrer" (error)="onPhotoError()">
+                <button type="button" class="remove-photo-btn" (click)="removePhoto()">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Ticket Configuration -->
+            <div class="border-t pt-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-ticket-alt text-purple-600 mr-2"></i>
+                Ticket Configuration
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-group">
+                  <label for="ticketPrice" class="form-label">Ticket Price ($)</label>
+                  <input 
+                    type="number" 
+                    id="ticketPrice" 
+                    formControlName="ticketPrice"
+                    class="form-input"
+                    min="0"
+                    step="0.01">
+                </div>
+
+                <div class="form-group">
+                  <label for="numberOfTickets" class="form-label">Number of Tickets *</label>
+                  <input 
+                    type="number" 
+                    id="numberOfTickets" 
+                    formControlName="numberOfTickets"
+                    class="form-input"
+                    min="1"
+                    max="100">
+                  <div *ngIf="ticketForm.get('numberOfTickets')?.invalid && ticketForm.get('numberOfTickets')?.touched" class="error-message">
+                    Number of tickets must be between 1 and 100.
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="ticketType" class="form-label">Ticket Type</label>
+                  <select id="ticketType" formControlName="ticketType" class="form-select">
+                    <option value="General">General Admission</option>
+                    <option value="VIP">VIP</option>
+                    <option value="Student">Student</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Child">Child</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group mt-4">
+                <label class="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    formControlName="includeQRCode"
+                    class="form-checkbox">
+                  <span class="ml-2 text-gray-700">Include QR Code</span>
+                </label>
+              </div>
+
+              <!-- QR Code Customization -->
+              <div *ngIf="ticketForm.get('includeQRCode')?.value" class="qr-settings-section">
+                <h4 class="text-md font-semibold text-gray-900 mb-4">
+                  <i class="fas fa-qrcode text-purple-600 mr-2"></i>
+                  QR Code Settings
+                </h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="form-group">
+                    <label for="qrCodeSize" class="form-label">QR Code Size (px)</label>
+                    <input 
+                      type="number" 
+                      id="qrCodeSize" 
+                      formControlName="qrCodeSize"
+                      class="form-input"
+                      min="100"
+                      max="500"
+                      step="10">
+                    <div *ngIf="ticketForm.get('qrCodeSize')?.invalid && ticketForm.get('qrCodeSize')?.touched" class="error-message">
+                      Size must be between 100 and 500 pixels.
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="qrCodeColor" class="form-label">QR Code Color</label>
+                    <div class="color-input-group">
+                      <input 
+                        type="color" 
+                        id="qrCodeColor" 
+                        formControlName="qrCodeColor"
+                        class="w-12 h-10 border border-gray-300 rounded cursor-pointer">
+                      <input 
+                        type="text" 
+                        [value]="ticketForm.get('qrCodeColor')?.value"
+                        (input)="onQrCodeColorChange($event)"
+                        class="form-input flex-1"
+                        placeholder="000000">
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="qrCodeBgColor" class="form-label">Background Color</label>
+                    <div class="color-input-group">
+                      <input 
+                        type="color" 
+                        id="qrCodeBgColor" 
+                        formControlName="qrCodeBgColor"
+                        class="w-12 h-10 border border-gray-300 rounded cursor-pointer">
+                      <input 
+                        type="text" 
+                        [value]="ticketForm.get('qrCodeBgColor')?.value"
+                        (input)="onQrCodeBgColorChange($event)"
+                        class="form-input flex-1"
+                        placeholder="FFFFFF">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="customMessage" class="form-label">Custom Message (Optional)</label>
+                <textarea 
+                  id="customMessage" 
+                  formControlName="customMessage"
+                  class="form-textarea"
+                  rows="2"
+                  placeholder="Add a custom message to your tickets..."></textarea>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-6">
+              <button 
+                type="submit" 
+                [disabled]="ticketForm.invalid || isGenerating"
+                class="btn-primary flex-1">
+                <i class="fas fa-calendar-plus mr-2"></i>
+                <span *ngIf="!isGenerating">Create Event & Generate Tickets</span>
+                <span *ngIf="isGenerating">
+                  <i class="fas fa-spinner fa-spin mr-2"></i>
+                  Generating...
+                </span>
+              </button>
+              
+              <button 
+                type="button" 
+                (click)="resetForm()"
+                class="btn-secondary flex-1">
+                <i class="fas fa-redo mr-2"></i>
+                Reset Form
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      <div class="preview-section">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+            <i class="fas fa-eye text-purple-600 mr-2"></i>
+            Ticket Preview
+          </h2>
+
+          <div *ngIf="!showPreview" class="text-center py-12">
+            <i class="fas fa-ticket-alt text-6xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">Fill out the form and generate tickets to see a preview here.</p>
+          </div>
+
+          <div *ngIf="showPreview && generatedTickets.length > 0" class="space-y-6">
+            <!-- Download Options -->
+            <div class="bg-purple-50 rounded-lg p-4 mb-6">
+              <h3 class="text-lg font-semibold text-purple-900 mb-3">Download Options</h3>
+              <div class="flex flex-col sm:flex-row gap-3">
+                <button 
+                  (click)="downloadTickets()"
+                  [disabled]="!areQRCodesReady()"
+                  class="btn-primary">
+                  <i class="fas fa-print mr-2"></i>
+                  Print Tickets
+                </button>
+                <button 
+                  (click)="downloadAsPDF()"
+                  class="btn-secondary">
+                  <i class="fas fa-file-pdf mr-2"></i>
+                  Download PDF
+                </button>
+              </div>
+              <div class="mt-2">
+                <p class="text-sm text-purple-700">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  QR codes will be included in the printed/downloaded tickets for verification.
+                </p>
+                <p *ngIf="!areQRCodesReady()" class="text-sm text-orange-600 mt-1">
+                  <i class="fas fa-clock mr-1"></i>
+                  Please wait for QR codes to finish generating...
+                </p>
+                <p *ngIf="areQRCodesReady()" class="text-sm text-green-600 mt-1">
+                  <i class="fas fa-check-circle mr-1"></i>
+                  QR codes are ready for printing!
+                </p>
+              </div>
+            </div>
+
+            <!-- Generated Tickets -->
+            <div class="space-y-4">
+              <h3 class="text-lg font-semibold text-gray-900">
+                Generated Tickets ({{ generatedTickets.length }})
+              </h3>
+
+              <div *ngFor="let ticket of generatedTickets; let i = index" class="ticket-preview">
+                <!-- Simple Purple Ticket Design -->
+                <div class="simple-ticket">
+                  <!-- Ticket Header -->
+                  <div class="ticket-header">
+                    <h1 class="event-title">{{ ticket.eventName }}</h1>
+                    <p class="ticket-id">Ticket ID: {{ ticket.id }}</p>
+                  </div>
+                  
+                  <!-- Ticket Body -->
+                  <div class="ticket-body">
+                    <!-- Event Details -->
+                    <div class="event-details">
+                      <div class="detail-row">
+                        <span class="label">Date:</span>
+                        <span class="value">{{ ticket.eventDate }}</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="label">Time:</span>
+                        <span class="value">{{ ticket.eventTime }}</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="label">Location:</span>
+                        <span class="value">{{ ticket.eventLocation }}</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="label">Ticket Type:</span>
+                        <span class="value">{{ ticket.ticketType }}</span>
+                      </div>
+                      <div class="detail-row">
+                        <span class="label">Price:</span>
+                        <span class="value">${{ ticket.ticketPrice }}</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Organizer & QR Code -->
+                    <div class="ticket-footer">
+                      <div class="organizer-info">
+                        <div class="detail-row">
+                          <span class="label">Organizer:</span>
+                          <span class="value">{{ ticket.organizerName }}</span>
+                        </div>
+                        <div class="detail-row">
+                          <span class="label">Contact:</span>
+                          <span class="value">{{ ticket.organizerEmail }}</span>
+                        </div>
+                      </div>
+                      
+                      <!-- QR Code -->
+                      <div *ngIf="ticket.qrCodeUrl" class="qr-section">
+                        <img 
+                          [src]="ticket.qrCodeUrl" 
+                          [alt]="'QR Code for ' + ticket.eventName"
+                          class="qr-code"
+                          loading="lazy">
+                        <p class="qr-text">QR Code for Verify ticket authenticity</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Custom Message (if any) -->
+                <div *ngIf="ticket.customMessage" class="mt-3 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                  <p class="text-sm text-yellow-800"><strong>Message:</strong> {{ ticket.customMessage }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-footer></app-footer>

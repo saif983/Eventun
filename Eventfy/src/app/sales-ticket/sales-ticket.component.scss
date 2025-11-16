@@ -1,0 +1,127 @@
+/* Standalone Store Page Styles */
+.standalone-store-page {
+  @apply min-h-screen bg-gray-50;
+}
+
+.standalone-main-content {
+  @apply py-8;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+}
+
+.modal-content {
+  @apply bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto;
+}
+
+.modal-header {
+  @apply flex items-center justify-between p-6 border-b border-gray-200;
+}
+
+.modal-title {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.modal-close {
+  @apply text-gray-400 hover:text-gray-600 transition-colors duration-200;
+}
+
+.modal-body {
+  @apply p-6;
+}
+
+/* Ticket Modal Specific Styles */
+.ticket-modal-image {
+  @apply mb-6;
+}
+
+.ticket-modal-details {
+  @apply space-y-4;
+}
+
+.detail-row {
+  @apply flex justify-between items-center py-2 border-b border-gray-100;
+}
+
+.detail-label {
+  @apply text-gray-500 font-medium;
+}
+
+.detail-value {
+  @apply text-gray-900;
+}
+
+.ticket-type-badge {
+  @apply px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800;
+}
+
+.pricing-details {
+  @apply bg-gray-50 rounded-lg p-4 mt-6;
+}
+
+.price-row {
+  @apply flex justify-between py-2;
+}
+
+.original-price {
+  @apply text-gray-500 line-through;
+}
+
+.selling-price {
+  @apply font-medium text-purple-600;
+}
+
+.discount {
+  @apply font-medium text-green-500;
+}
+
+.description {
+  @apply mt-6;
+}
+
+.description h4 {
+  @apply font-medium text-gray-900 mb-2;
+}
+
+.description p {
+  @apply text-gray-600;
+}
+
+/* Quantity Section */
+.quantity-section {
+  @apply mt-6;
+}
+
+.quantity-section h4 {
+  @apply font-medium text-gray-900 mb-3;
+}
+
+.quantity-controls {
+  @apply flex items-center space-x-4 mb-3;
+}
+
+.quantity-btn {
+  @apply w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.quantity-display {
+  @apply text-lg font-medium text-gray-900 min-w-[2rem] text-center;
+}
+
+.quantity-info {
+  @apply text-sm text-gray-600;
+}
+
+.modal-actions {
+  @apply flex space-x-4 mt-8;
+}
+
+.btn-primary {
+  @apply flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply flex-1 bg-white hover:bg-gray-50 text-gray-800 font-medium py-3 px-4 border border-gray-300 rounded-lg transition duration-200;
+}

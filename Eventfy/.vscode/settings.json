@@ -1,0 +1,19 @@
+{
+  "css.validate": false,
+  "scss.validate": false,
+  "less.validate": false,
+  "css.customData": [".vscode/css_custom_data.json"],
+  "files.associations": {
+    "*.scss": "scss"
+  },
+  "emmet.includeLanguages": {
+    "scss": "css"
+  },
+  "tailwindCSS.includeLanguages": {
+    "scss": "scss"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["@apply\\s+([^;}]+)", "([^;}]+)"],
+    ["classList\\.add\\(([^)]*)\\)", "([^)]*)"]
+  ]
+}

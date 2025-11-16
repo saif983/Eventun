@@ -1,0 +1,129 @@
+<footer class="footer">
+  <div class="footer-content">
+    <!-- Main Footer Section -->
+    <div class="footer-main">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="footer-grid">
+          <!-- Company Info -->
+          <div class="footer-section">
+            <div class="footer-logo">
+              <img src="favicon.ico" alt="EvenTun Logo" class="h-8 w-8 mr-2">
+              <span class="text-xl font-bold text-gray-900">EvenTun</span>
+            </div>
+            <p class="footer-description">
+              Professional event ticketing platform helping you sell tickets, manage attendees, and streamline check-in for any event.
+            </p>
+            <div class="social-links">
+              <button (click)="openSocialLink('facebook')" class="social-link">
+                <i class="fab fa-facebook-f"></i>
+              </button>
+              <button (click)="openSocialLink('twitter')" class="social-link">
+                <i class="fab fa-twitter"></i>
+              </button>
+              <button (click)="openSocialLink('instagram')" class="social-link">
+                <i class="fab fa-instagram"></i>
+              </button>
+              <button (click)="openSocialLink('linkedin')" class="social-link">
+                <i class="fab fa-linkedin-in"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Links -->
+          <div class="footer-section">
+            <h3 class="footer-title">Quick Links</h3>
+            <ul class="footer-links">
+              <li><a href="/home" class="footer-link">Home</a></li>
+              <li><a href="/tickets" class="footer-link">Ticket Store</a></li>
+              <li><a href="/store?view=cart" class="footer-link">Shopping Cart</a></li>
+              <li><a href="#contact" class="footer-link">Contact Us</a></li>
+              <li><a href="#about" class="footer-link">About Us</a></li>
+            </ul>
+          </div>
+
+          <!-- Services -->
+          <div class="footer-section">
+            <h3 class="footer-title">Services</h3>
+            <ul class="footer-links">
+              <li><a href="#" class="footer-link">Event Ticketing</a></li>
+              <li><a href="#" class="footer-link">Ticket Sales</a></li>
+              <li><a href="#" class="footer-link">Attendee Management</a></li>
+              <li><a href="#" class="footer-link">QR Code Check-in</a></li>
+              <li><a href="#" class="footer-link">Analytics & Reporting</a></li>
+            </ul>
+          </div>
+
+          <!-- Support -->
+          <div class="footer-section">
+            <h3 class="footer-title">Support</h3>
+            <ul class="footer-links">
+              <li><a href="#" class="footer-link">Help Center</a></li>
+              <li><a href="#" class="footer-link">Contact Support</a></li>
+              <li><a href="#" class="footer-link">FAQs</a></li>
+              <li><a href="#" class="footer-link">Terms of Service</a></li>
+              <li><a href="#" class="footer-link">Privacy Policy</a></li>
+            </ul>
+          </div>
+
+          <!-- Contact Info -->
+          <div class="footer-section">
+            <h3 class="footer-title">Contact Info</h3>
+            <div class="contact-info">
+              <div class="contact-item">
+                <i class="fas fa-map-marker-alt text-purple-600"></i>
+                <span>Tunis ,Gouvernorat de tunis, Tunisie</span>
+              </div>
+              <div class="contact-item">
+                <i class="fas fa-phone text-purple-600"></i>
+                <span>+216 21 333 495</span>
+              </div>
+              <div class="contact-item">
+                <i class="fas fa-envelope text-purple-600"></i>
+                <span>info&#64;eventun.com</span>
+              </div>
+              <div class="contact-item">
+                <i class="fas fa-clock text-purple-600"></i>
+                <span>Mon - Fri: 9:00 AM - 6:00 PM</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Newsletter Section -->
+    <div class="newsletter-section">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="newsletter-content">
+          <div class="newsletter-text">
+            <h3 class="newsletter-title">Stay Updated</h3>
+            <p class="newsletter-description">Subscribe to our newsletter for the latest events and updates.</p>
+          </div>
+          <div class="newsletter-form">
+            <input type="email" placeholder="Enter your email" class="newsletter-input">
+            <button class="newsletter-button">Subscribe</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Footer -->
+    <div class="footer-bottom">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="footer-bottom-content">
+          <div class="copyright">
+            <p>&copy; {{ currentYear }} EvenTun. All rights reserved.</p>
+          </div>
+          <div class="footer-bottom-links">
+            <a href="#" class="footer-bottom-link">Terms of Service</a>
+            <a href="#" class="footer-bottom-link">Privacy Policy</a>
+            <a href="#" class="footer-bottom-link">Cookie Policy</a>
+          </div>
+          <button (click)="scrollToTop()" class="scroll-to-top">
+            <i class="fas fa-arrow-up"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

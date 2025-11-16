@@ -1,0 +1,19 @@
+.form-input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200;
+  
+  &.error {
+    @apply border-red-500 focus:ring-red-500 focus:border-red-500;
+  }
+}
+
+.error-message {
+  @apply text-red-500 text-sm mt-1;
+}
+
+.complete-order-btn {
+  @apply transition-all duration-200;
+}
+
+.cancel-order-btn {
+  @apply transition-all duration-200;
+}

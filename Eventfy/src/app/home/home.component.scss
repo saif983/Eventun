@@ -1,0 +1,323 @@
+/* Hero Section */
+.hero-section {
+  @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50;
+}
+
+.hero-title {
+  @apply text-4xl md:text-6xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent;
+}
+
+.hero-subtitle {
+  @apply text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto;
+}
+
+.hero-buttons {
+  @apply flex flex-col sm:flex-row gap-4 justify-center items-center;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl;
+}
+
+.btn-secondary {
+  @apply bg-white text-gray-700 px-8 py-3 rounded-lg font-semibold border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl;
+}
+
+.btn-sm {
+  @apply px-4 py-2 text-sm;
+}
+
+/* Section Styles */
+.section-title {
+  @apply text-3xl md:text-4xl font-bold text-gray-900 mb-4;
+}
+
+.section-subtitle {
+  @apply text-lg text-gray-600 mb-12 max-w-3xl mx-auto;
+}
+
+/* Services Section */
+.services-section {
+  @apply py-20 bg-white;
+}
+
+.services-grid {
+  @apply grid md:grid-cols-2 gap-8 mt-12;
+}
+
+.service-card {
+  @apply bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100;
+}
+
+.service-icon {
+  @apply w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg flex items-center justify-center mb-6;
+}
+
+.service-icon i {
+  @apply text-white text-2xl;
+}
+
+.service-title {
+  @apply text-2xl font-bold text-gray-900 mb-4;
+}
+
+.service-description {
+  @apply text-gray-600 mb-6;
+}
+
+.service-features {
+  @apply space-y-3 mb-8;
+}
+
+.feature-item {
+  @apply flex items-center space-x-3;
+}
+
+.feature-item i {
+  @apply text-green-500 text-sm;
+}
+
+.service-pricing {
+  @apply border-t border-gray-200 pt-6;
+}
+
+.pricing-title {
+  @apply text-lg font-semibold text-gray-900 block mb-2;
+}
+
+.pricing-description {
+  @apply text-gray-600 mb-4;
+}
+
+/* Features Section */
+.features-section {
+  @apply py-20 bg-gray-50;
+}
+
+.features-grid {
+  @apply grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12;
+}
+
+.feature-item {
+  @apply bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300;
+}
+
+.feature-icon {
+  @apply w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4;
+}
+
+.feature-icon i {
+  @apply text-white text-xl;
+}
+
+.feature-title {
+  @apply text-xl font-semibold text-gray-900 mb-3;
+}
+
+.feature-description {
+  @apply text-gray-600;
+}
+
+/* Portfolio Section */
+.portfolio-section {
+  @apply py-20 bg-white;
+}
+
+.portfolio-grid {
+  @apply grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12;
+}
+
+.portfolio-item {
+  @apply bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300;
+}
+
+.portfolio-image-container {
+  @apply relative overflow-hidden;
+}
+
+.portfolio-image {
+  @apply w-full h-48 object-cover transition-transform duration-300;
+}
+
+.portfolio-item:hover .portfolio-image {
+  @apply transform scale-105;
+}
+
+.portfolio-overlay {
+  @apply absolute inset-0 bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center;
+}
+
+.portfolio-overlay-content {
+  @apply text-white text-center;
+}
+
+.portfolio-overlay-content i {
+  @apply text-3xl mb-2;
+}
+
+.portfolio-category {
+  @apply text-sm font-medium;
+}
+
+.portfolio-content {
+  @apply p-6;
+}
+
+.portfolio-header {
+  @apply mb-4;
+}
+
+.portfolio-title {
+  @apply text-xl font-bold text-gray-900 mb-2;
+}
+
+.portfolio-meta {
+  @apply flex items-center space-x-4 text-sm text-gray-500;
+}
+
+.portfolio-attendees, .portfolio-location {
+  @apply flex items-center space-x-1;
+}
+
+.portfolio-description {
+  @apply text-gray-600 mb-4;
+}
+
+.portfolio-actions {
+  @apply flex space-x-3;
+}
+
+/* Contact Section */
+.contact-section {
+  @apply py-20 bg-gray-50;
+}
+
+.contact-grid {
+  @apply grid lg:grid-cols-2 gap-12 mt-12;
+}
+
+.contact-info {
+  @apply space-y-8;
+}
+
+.contact-details {
+  @apply space-y-6;
+}
+
+.contact-item {
+  @apply flex items-start space-x-4;
+}
+
+.contact-icon {
+  @apply w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0;
+}
+
+.contact-icon i {
+  @apply text-white text-xl;
+}
+
+.contact-content {
+  @apply flex-1;
+}
+
+.contact-title {
+  @apply text-lg font-semibold text-gray-900 mb-1;
+}
+
+.contact-value {
+  @apply text-gray-600;
+}
+
+/* Form Styles */
+.contact-form-container {
+  @apply bg-white p-8 rounded-lg shadow-lg;
+}
+
+.contact-form {
+  @apply space-y-6;
+}
+
+.form-group {
+  @apply space-y-2;
+}
+
+.form-group label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-input {
+  @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200;
+}
+
+.form-input.error {
+  @apply border-red-500 focus:ring-red-500;
+}
+
+.error-message {
+  @apply text-red-500 text-sm;
+}
+
+.checkbox-group {
+  @apply flex items-center space-x-3;
+}
+
+.form-checkbox {
+  @apply w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+}
+
+.modal-content {
+  @apply bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto;
+}
+
+.modal-header {
+  @apply flex items-center justify-between p-6 border-b border-gray-200;
+}
+
+.modal-title {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.modal-close {
+  @apply text-gray-400 hover:text-gray-600 transition-colors duration-200;
+}
+
+.modal-body {
+  @apply p-6 text-center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-title {
+    @apply text-3xl;
+  }
+  
+  .hero-subtitle {
+    @apply text-lg;
+  }
+  
+  .section-title {
+    @apply text-2xl;
+  }
+  
+  .services-grid {
+    @apply grid-cols-1;
+  }
+  
+  .features-grid {
+    @apply grid-cols-1;
+  }
+  
+  .portfolio-grid {
+    @apply grid-cols-1;
+  }
+  
+  .contact-grid {
+    @apply grid-cols-1;
+  }
+}
