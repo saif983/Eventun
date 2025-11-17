@@ -1,8 +1,11 @@
+/// <reference types="jasmine" />
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PLATFORM_ID } from '@angular/core';
+
+import { CookieService } from '../services/cookie.service';
 
 import { PaymentComponent } from './payment.component';
 
@@ -37,15 +40,19 @@ describe('PaymentComponent', () => {
   let fixture: ComponentFixture<PaymentComponent>;
   let httpMock: HttpTestingController;
   let router: jasmine.SpyObj<Router>;
+  let cookieService: jasmine.SpyObj<CookieService>;
 
   beforeEach(async () => {
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    const cookieServiceSpy = jasmine.createSpyObj('CookieService', ['setCookie', 'getCookie']);
+    cookieServiceSpy.getCookie.and.returnValue(null);
 
     await TestBed.configureTestingModule({
       imports: [PaymentComponent, HttpClientTestingModule, ReactiveFormsModule],
       providers: [
         { provide: Router, useValue: routerSpy },
-        { provide: PLATFORM_ID, useValue: 'browser' }
+        { provide: PLATFORM_ID, useValue: 'browser' },
+        { provide: CookieService, useValue: cookieServiceSpy }
       ]
     })
     .compileComponents();
@@ -54,6 +61,7 @@ describe('PaymentComponent', () => {
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+    cookieService = TestBed.inject(CookieService) as jasmine.SpyObj<CookieService>;
 
     // Mock Stripe
     window.Stripe = jasmine.createSpy('Stripe').and.returnValue(mockStripe);
@@ -161,18 +169,25 @@ describe('PaymentComponent', () => {
       amount: 7750,
       currency: 'usd'
     };
-    
-    spyOn(localStorage, 'setItem');
-    
+
     component.handlePaymentSuccess(mockPaymentIntent);
     
-    expect(component.paymentSucceeded).toBeTruthy();
-    expect(localStorage.setItem).toHaveBeenCalled();
+    expect(cookieService.setCookie).toHaveBeenCalledWith(
+      'lastPayment',
+      jasmine.any(String),
+      7
+    );
+    const [, savedValue] = cookieService.setCookie.calls.mostRecent().args;
+    const savedPayload = JSON.parse(savedValue as string);
+    expect(savedPayload.paymentIntentId).toBe('pi_test_123');
     
     // Check if navigation is scheduled
     setTimeout(() => {
-      expect(router.navigate).toHaveBeenCalledWith(['/payment-success'], {
-        queryParams: { payment_intent: 'pi_test_123' }
+      expect(router.navigate).toHaveBeenCalledWith(['/tickets'], {
+        queryParams: {
+          payment_success: 'true',
+          payment_intent: 'pi_test_123'
+        }
       });
     }, 3100);
   });
@@ -250,15 +265,15 @@ describe('PaymentComponent', () => {
       }
     });
     
-    // Mock createPaymentIntent
-    spyOn(component, 'createPaymentIntent').and.returnValue(
-      Promise.resolve({
-        id: 'pi_test_123',
-        client_secret: 'pi_test_123_secret',
-        amount: 7750,
-        currency: 'usd',
-        status: 'requires_payment_method'
-      })
+    spyOn(component['cartService'], 'getCartItems').and.returnValue([
+      {
+        ticket: { id: '1', price: 50 },
+        quantity: 1
+      } as any
+    ]);
+
+    spyOn(component as any, 'purchaseTickets').and.returnValue(
+      Promise.reject(new Error('Payment failed'))
     );
     
     await component.processPayment();

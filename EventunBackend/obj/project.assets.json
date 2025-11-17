@@ -5420,11 +5420,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\saif\\Music\\Saas\\enventfy\\EventunBackend\\EventunBackend.csproj",
+      "projectUniqueName": "C:\\Users\\saif\\Music\\Saas\\enventfy\\eventunbackend\\EventunBackend.csproj",
       "projectName": "EventunBackend",
-      "projectPath": "C:\\Users\\saif\\Music\\Saas\\enventfy\\EventunBackend\\EventunBackend.csproj",
+      "projectPath": "C:\\Users\\saif\\Music\\Saas\\enventfy\\eventunbackend\\EventunBackend.csproj",
       "packagesPath": "C:\\Users\\saif\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\saif\\Music\\Saas\\enventfy\\EventunBackend\\obj\\",
+      "outputPath": "C:\\Users\\saif\\Music\\Saas\\enventfy\\eventunbackend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

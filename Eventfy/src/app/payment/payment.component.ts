@@ -80,22 +80,31 @@ export class PaymentComponent implements OnInit {
   ngOnInit() {
     this.initForm();
     // Prefill from checkout data if available
-    this.loadFromCheckoutData();
+    const hasTicketsInCart = this.loadFromCheckoutData();
+
+    if (!hasTicketsInCart) {
+      this.cookieService.deleteCookie('checkoutData');
+      this.router.navigate(['/tickets']);
+      return;
+    }
+
     if (this.isBrowser) {
       this.loadStripe();
     }
   }
 
-  private loadFromCheckoutData() {
+  private loadFromCheckoutData(): boolean {
+    let hasCartItems = false;
     try {
       // Load from cart service first (real data)
       const cartItems = this.cartService.getCartItems();
       if (cartItems.length > 0) {
+        hasCartItems = true;
         this.ticketItems = cartItems.map(ci => {
           const t = ci.ticket;
           const eventDate = t.eventDate ? new Date(t.eventDate) : null;
           return {
-            id: t.tenantId || t.id || 'unknown',
+            id: t.id || t.tenantId || 'unknown',
             name: t.eventName || 'Ticket',
             price: Number(t.price || t.sellingPrice || 0),
             quantity: ci.quantity,
@@ -119,6 +128,8 @@ export class PaymentComponent implements OnInit {
     } catch {
       // Ignore parse errors; leave defaults
     }
+
+    return hasCartItems;
   }
 
   initForm() {
@@ -283,38 +294,31 @@ export class PaymentComponent implements OnInit {
   }
 
   private async purchaseTickets(cartItems: any[]): Promise<void> {
-    // Purchase all tickets in cart using TicketService
-    const purchaseRequests = cartItems.map(item => {
-      const purchaseDto = {
-        ticketId: item.ticket.tenantId || item.ticket.id || ''
-      };
-      
-      // Purchase each ticket quantity times
-      const requests = [];
-      for (let i = 0; i < item.quantity; i++) {
-        requests.push(
-          this.ticketService.purchaseTicket(purchaseDto).pipe(
-            catchError(error => {
-              console.error(`Error purchasing ticket ${item.ticket.tenantId}:`, error);
-              return of(null);
-            })
-          )
-        );
+    // Aggregate quantities per real ticket id
+    const itemsMap = new Map<string, number>();
+    for (const item of cartItems) {
+      const ticketId: string = item.ticket.tenantId || item.ticket.id || '';
+      if (!ticketId) {
+        throw new Error('Invalid ticket identifier in cart');
       }
-      return requests;
-    }).flat();
-
-    // Execute all purchases in parallel
-    const results = await forkJoin(purchaseRequests).toPromise();
-    
-    // Check if all purchases succeeded
-    const failedPurchases = results?.filter(r => r === null).length || 0;
-    if (failedPurchases > 0) {
-      throw new Error(`${failedPurchases} ticket(s) could not be purchased. Please try again.`);
+      itemsMap.set(ticketId, (itemsMap.get(ticketId) || 0) + item.quantity);
     }
 
-    // Clear cart after successful purchase
-    this.cartService.clearCart();
+    const payload = {
+      items: Array.from(itemsMap.entries()).map(([ticketId, quantity]) => ({ ticketId, quantity }))
+    };
+
+    try {
+      const purchased = await this.ticketService.purchaseTicketsBulk(payload).toPromise();
+      const totalRequested = payload.items.reduce((s, it) => s + it.quantity, 0);
+      const totalConfirmed = (purchased || []).reduce((s, t) => s + (t.quantity || 0), 0);
+      if (totalConfirmed !== totalRequested) {
+        throw new Error('Purchase confirmation mismatch. Some tickets may be unavailable.');
+      }
+      this.cartService.clearCart();
+    } catch (err: any) {
+      throw new Error(err?.error || err?.message || 'Unable to complete purchase');
+    }
   }
 
   handlePaymentSuccess(paymentIntent: any) {
@@ -333,6 +337,10 @@ export class PaymentComponent implements OnInit {
     };
 
     this.cookieService.setCookie('lastPayment', JSON.stringify(paymentDetails), 7);
+    this.cookieService.deleteCookie('checkoutData');
+
+    // Attempt to generate and download a simple PDF receipt
+    this.downloadReceiptPdf(paymentDetails).catch(() => {});
 
     // Redirect to success page after 3 seconds
     setTimeout(() => {
@@ -345,18 +353,77 @@ export class PaymentComponent implements OnInit {
     }, 3000);
   }
 
+  private async downloadReceiptPdf(details: any): Promise<void> {
+    try {
+      await this.ensureJsPdf();
+      const jsPDF = (window as any).jspdf.jsPDF;
+      const doc = new jsPDF();
+      const line = (text: string, y: number) => doc.text(text, 14, y);
+
+      let y = 20;
+      doc.setFontSize(16);
+      line('Ticket Purchase Receipt', y); y += 10;
+      doc.setFontSize(11);
+      line(`Payment ID: ${details.paymentIntentId}`, y); y += 7;
+      line(`Date: ${new Date(details.timestamp).toLocaleString()}`, y); y += 7;
+      line(`Customer: ${details.customerInfo.fullName} (${details.customerInfo.email})`, y); y += 7;
+      line(`Total Paid: ${details.amount} ${details.currency.toUpperCase()}`, y); y += 10;
+
+      line('Tickets:', y); y += 7;
+      (details.tickets || []).forEach((t: any, idx: number) => {
+        line(`${idx + 1}. ${t.name}  x${t.quantity}  —  ${t.price} each`, y); y += 6;
+        if (t.eventDate || t.eventLocation) {
+          line(`   ${t.eventDate || ''}  ${t.eventLocation || ''}`.trim(), y); y += 6;
+        }
+      });
+
+      doc.save(`ticket-receipt-${details.paymentIntentId}.pdf`);
+    } catch {}
+  }
+
+  private ensureJsPdf(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const w = window as any;
+      if (w.jspdf && w.jspdf.jsPDF) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.onload = () => resolve();
+      script.onerror = (e) => reject(e);
+      document.head.appendChild(script);
+    });
+  }
+
   updateQuantity(itemId: string, change: number) {
     const item = this.ticketItems.find(i => i.id === itemId);
     if (item) {
       const newQuantity = item.quantity + change;
-      if (newQuantity >= 0 && newQuantity <= 10) {
-        item.quantity = newQuantity;
+
+      if (newQuantity < 1) {
+        this.removeItem(itemId);
+        return;
+      }
+
+      if (newQuantity > 10) {
+        return;
+      }
+
+      item.quantity = newQuantity;
+      if (itemId) {
+        this.cartService.updateQuantity(itemId, newQuantity);
       }
     }
   }
 
   removeItem(itemId: string) {
     this.ticketItems = this.ticketItems.filter(item => item.id !== itemId);
+    if (itemId) {
+      this.cartService.removeFromCart(itemId);
+    }
+
+    if (this.ticketItems.length === 0) {
+      this.cookieService.deleteCookie('checkoutData');
+      this.router.navigate(['/tickets']);
+    }
   }
 
   private markFormGroupTouched() {

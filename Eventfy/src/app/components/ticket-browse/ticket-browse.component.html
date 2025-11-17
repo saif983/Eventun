@@ -34,26 +34,93 @@
       </div>
     </div>
 
-    <!-- Tickets Grid -->
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">Featured Tickets</h2>
-    
+    <!-- Events Grid -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900">Upcoming Events</h2>
+        <p class="text-sm text-gray-500">{{ filteredEvents.length }} event(s) found</p>
+      </div>
+      <button 
+        type="button"
+        class="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-700"
+        (click)="loadEvents()">
+        <i class="fas fa-sync-alt mr-2"></i>Refresh
+      </button>
+    </div>
+
     <!-- Loading State -->
     <div *ngIf="isLoading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
       <span class="ml-3 text-gray-600">Loading events...</span>
     </div>
     
-    <!-- Tickets Grid -->
+    <!-- Events Grid -->
     <div *ngIf="!isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      <app-ticket-card 
-        *ngFor="let ticket of paginatedTickets"
-        [ticket]="ticket"
-        (ticketClick)="onTicketClick($event)">
-      </app-ticket-card>
+      <div 
+        *ngFor="let event of paginatedEvents; trackBy: trackByEvent"
+        class="event-card">
+        <div class="relative">
+          <img 
+            *ngIf="event.picture"
+            [src]="event.picture"
+            [alt]="event.titre"
+            class="w-full h-48 object-cover rounded-t-xl">
+          <div *ngIf="!event.picture" class="w-full h-48 bg-gray-200 rounded-t-xl flex items-center justify-center">
+            <i class="fas fa-image text-gray-400 text-4xl"></i>
+          </div>
+          <div class="absolute top-4 left-4">
+            <span class="event-category">{{ event.category || 'Other' }}</span>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">{{ event.titre }}</h3>
+              <p class="text-sm text-gray-500">by {{ event.eventOwner }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-medium text-purple-600">From {{ event.ticketPrice || 'N/A' }} DH</p>
+              <p class="text-xs text-gray-400">
+                {{ eventAvailableQuantities[event.tenantId] ?? event.ticketQte || 0 }} ticket(s)
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center text-gray-500 text-sm">
+            <i class="far fa-calendar-alt mr-2"></i>
+            <span>{{ event.startDate | date:'EEE, MMM d · h:mm a' }}</span>
+          </div>
+
+          <div class="flex items-center text-gray-500 text-sm">
+            <i class="fas fa-map-marker-alt mr-2"></i>
+            <span>{{ event.location || 'TBD' }}</span>
+          </div>
+
+          <p class="text-sm text-gray-600 line-clamp-2" *ngIf="event.description">
+            {{ event.description }}
+          </p>
+
+          <button
+            type="button"
+            class="btn-view-event"
+            [disabled]="eventTicketLoading[event.tenantId]"
+            (click)="onEventSelect(event)">
+            <span *ngIf="!eventTicketLoading[event.tenantId]">
+              <i class="fas fa-ticket-alt mr-2"></i>
+              View Tickets
+            </span>
+            <span *ngIf="eventTicketLoading[event.tenantId]" class="flex items-center">
+              <span class="loading-spinner-small mr-2"></span>
+              Loading...
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
     
     <!-- No Results -->
-    <div *ngIf="!isLoading && filteredTickets.length === 0" class="text-center py-12">
+    <div *ngIf="!isLoading && filteredEvents.length === 0" class="text-center py-12">
       <p class="text-gray-500 text-lg">No events found matching your criteria.</p>
       <p class="text-gray-400 mt-2">Try adjusting your search or category filters.</p>
     </div>

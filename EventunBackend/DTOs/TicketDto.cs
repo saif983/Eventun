@@ -42,6 +42,21 @@ namespace EventunBackend.DTOs
         public string TicketId { get; set; } = string.Empty;
     }
 
+    public class PurchaseTicketsBulkDto
+    {
+        [Required]
+        public List<PurchaseItemDto> Items { get; set; } = new List<PurchaseItemDto>();
+    }
+
+    public class PurchaseItemDto
+    {
+        [Required]
+        public string TicketId { get; set; } = string.Empty;
+        
+        [Range(1, int.MaxValue)]
+        public int Quantity { get; set; } = 1;
+    }
+
     public class TicketSearchDto
     {
         public string? Query { get; set; }

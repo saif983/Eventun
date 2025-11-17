@@ -69,6 +69,11 @@ export class TicketService {
     return this.apiService.purchaseTicket(purchaseDto);
   }
 
+  // Purchase multiple tickets (quantity-aware)
+  purchaseTicketsBulk(payload: { items: { ticketId: string; quantity: number }[] }): Observable<Ticket[]> {
+    return this.apiService.purchaseTicketsBulk(payload);
+  }
+
   // Generate multiple tickets for an event (for owners)
   generateEventTickets(eventId: string, generateDto: GenerateTicketsDto): Observable<Ticket[]> {
     const ticketRequests: CreateTicketDto[] = [{

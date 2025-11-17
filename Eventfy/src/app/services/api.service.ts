@@ -124,6 +124,10 @@ export class ApiService {
     return this.http.post<Ticket>(`${this.baseUrl}/ticket/purchase`, purchaseDto, { headers: this.getHeaders() });
   }
 
+  purchaseTicketsBulk(payload: { items: { ticketId: string; quantity: number }[] }): Observable<Ticket[]> {
+    return this.http.post<Ticket[]>(`${this.baseUrl}/ticket/purchase-bulk`, payload, { headers: this.getHeaders() });
+  }
+
   generateEventTickets(eventId: string, ticketRequests: CreateTicketDto[]): Observable<Ticket[]> {
     return this.http.post<Ticket[]>(`${this.baseUrl}/Event/${eventId}/generate-tickets`, ticketRequests, {
       headers: this.getHeaders()

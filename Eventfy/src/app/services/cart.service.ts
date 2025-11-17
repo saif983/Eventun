@@ -81,7 +81,12 @@ export class CartService {
 
   private saveCartToStorage(): void {
     try {
-      this.cookieService.setCookie('cart', JSON.stringify(this.cartItems), 7);
+      if (this.cartItems.length === 0) {
+        this.cookieService.deleteCookie('cart');
+        this.cookieService.deleteCookie('checkoutData');
+      } else {
+        this.cookieService.setCookie('cart', JSON.stringify(this.cartItems), 7);
+      }
     } catch (error) {
       console.error('Error saving cart to cookies:', error);
     }

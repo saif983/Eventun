@@ -1,18 +1,17 @@
 import { Component, OnInit, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TicketCardComponent } from '../ticket-card/ticket-card.component';
 import { Ticket } from '../../models/ticket.model';
 import { TicketService } from '../../services/ticket.service';
 import { EventService } from '../../services/event.service';
 import { Event, EventSearchDto } from '../../models/event.model';
-import { forkJoin, Subject, of } from 'rxjs';
-import { takeUntil, catchError } from 'rxjs/operators';
+import { Subject, of, forkJoin } from 'rxjs';
+import { takeUntil, catchError, finalize, map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-ticket-browse',
   standalone: true,
-  imports: [CommonModule, FormsModule, TicketCardComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './ticket-browse.component.html',
   styleUrl: './ticket-browse.component.scss'
 })
@@ -35,9 +34,11 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
     { id: 'Other', name: 'Other' }
   ];
 
-  tickets: Ticket[] = [];
-  filteredTickets: Ticket[] = [];
+  events: Event[] = [];
+  filteredEvents: Event[] = [];
   isLoading = true;
+  eventTicketLoading: Record<string, boolean> = {};
+  eventAvailableQuantities: Record<string, number> = {};
 
   constructor(
     private ticketService: TicketService, 
@@ -45,33 +46,24 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.loadTickets();
+    this.loadEvents();
   }
 
-  private loadTickets() {
+  loadEvents() {
     this.isLoading = true;
-    // Use the same approach as home component - direct subscription
     this.eventService.getEvents()
       .pipe(
         takeUntil(this.destroy$),
         catchError(error => {
           console.error('Error loading events:', error);
           this.isLoading = false;
-          this.tickets = [];
-          this.filteredTickets = [];
+          this.events = [];
+          this.filteredEvents = [];
           return of([] as Event[]);
         })
       )
       .subscribe({
-        next: (events) => {
-          if (events && events.length > 0) {
-            this.fetchAvailableTicketsForEvents(events);
-          } else {
-            this.isLoading = false;
-            this.tickets = [];
-            this.filteredTickets = [];
-          }
-        }
+        next: (events) => this.filterEventsByAvailability(events || [])
       });
   }
 
@@ -91,200 +83,103 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
         category: this.selectedCategory !== 'all' ? this.selectedCategory : undefined
       };
       this.isLoading = true;
-      // Use the same direct subscription approach as home component
       this.eventService.searchEvents(searchDto)
         .pipe(
           takeUntil(this.destroy$),
           catchError(error => {
             console.error('Error searching events:', error);
-            this.filteredTickets = [];
+            this.filteredEvents = [];
             this.isLoading = false;
             return of([] as Event[]);
           })
         )
         .subscribe({
-          next: (events) => {
-            if (events && events.length > 0) {
-              this.fetchAvailableTicketsForEvents(events);
-            } else {
-              this.isLoading = false;
-              this.filteredTickets = [];
-            }
-          }
+          next: (events) => this.filterEventsByAvailability(events || [], false)
         });
     } else {
-      // Reset to all tickets when no filters
-      this.filteredTickets = [...this.tickets];
+      this.filteredEvents = [...this.events];
       this.currentPage = 1;
+      this.isLoading = false;
     }
   }
 
-  /**
-   * Fetches available tickets for multiple events
-   * Uses backend API: GET /api/ticket/available/{eventId}
-   * Backend filters: IsActive && !IsPurchased && TicketStatus == "Available"
-   * Backend orders by: Price (ascending), then TicketType
-   * Ticket types: VIP, Standard, Student (from TicketType constants)
-   */
-  private fetchAvailableTicketsForEvents(events: Event[]) {
-    if (!events || events.length === 0) {
-      this.tickets = [];
-      this.filteredTickets = [];
-      this.isLoading = false;
+  private buildTicketFromEvent(event: Event, ticketOverride?: Partial<Ticket>): Ticket {
+    const fallbackPrice = parseFloat(event.ticketPrice || '0') || 0;
+    const fallbackQty = parseInt(event.ticketQte || '1', 10) || 1;
+
+    return {
+      tenantId: ticketOverride?.tenantId || event.tenantId,
+      userId: ticketOverride?.userId || event.userId,
+      eventId: ticketOverride?.eventId || event.tenantId,
+      ticketNumber: ticketOverride?.ticketNumber || `EVT-${event.tenantId}-${Date.now()}`,
+      ticketType: ticketOverride?.ticketType || 'General',
+      price: ticketOverride?.price ?? fallbackPrice,
+      quantity: ticketOverride?.quantity ?? fallbackQty,
+      isPurchased: ticketOverride?.isPurchased ?? false,
+      purchasedByUserId: ticketOverride?.purchasedByUserId,
+      purchaseDate: ticketOverride?.purchaseDate,
+      qrCode: ticketOverride?.qrCode || '',
+      ticketStatus: ticketOverride?.ticketStatus || 'Available',
+      id: ticketOverride?.id || event.tenantId,
+      isActive: ticketOverride?.isActive ?? true,
+      createdAt: ticketOverride?.createdAt || new Date(event.startDate),
+      updatedAt: ticketOverride?.updatedAt || new Date(event.startDate),
+      eventName: event.titre,
+      eventLocation: event.location || 'TBD',
+      eventDate: new Date(event.startDate),
+      category: event.category || 'Other',
+      originalPrice: ticketOverride?.originalPrice ?? fallbackPrice,
+      sellingPrice: ticketOverride?.sellingPrice ?? (ticketOverride?.price ?? fallbackPrice),
+      availableQuantity: ticketOverride?.availableQuantity ?? fallbackQty,
+      totalQuantity: ticketOverride?.totalQuantity ?? fallbackQty,
+      imageUrl: event.picture,
+      rating: ticketOverride?.rating ?? 4.5,
+      sellerName: event.eventOwner,
+      description: event.description,
+    };
+  }
+
+  onEventSelect(event: Event) {
+    if (!event?.tenantId) {
       return;
     }
 
-    // Create a map of eventId to event for quick lookup
-    const eventMap = new Map<string, Event>();
-    events.forEach(ev => {
-      if (ev && ev.tenantId) {
-        eventMap.set(ev.tenantId, ev);
-      }
-    });
-    
-    // Create requests for all events - using the same pattern as home component
-    const requests = events
-      .filter(e => e && e.tenantId)
-      .map(e => 
-        this.ticketService.getAvailableTickets(e.tenantId).pipe(
-          catchError(error => {
-            console.warn(`Error loading tickets for event ${e.tenantId}:`, error);
-            return of([] as Ticket[]);
-          })
-        )
-      );
-    
-    if (requests.length === 0) {
-      this.tickets = [];
-      this.filteredTickets = [];
-      this.isLoading = false;
-      return;
-    }
-    
-    // Use forkJoin to fetch all tickets in parallel - similar to how home loads events
-    forkJoin(requests)
+    this.eventTicketLoading[event.tenantId] = true;
+
+    this.ticketService.getAvailableTickets(event.tenantId)
       .pipe(
         takeUntil(this.destroy$),
-        catchError(error => {
-          console.error('Error in forkJoin for tickets:', error);
-          this.tickets = [];
-          this.filteredTickets = [];
-          this.isLoading = false;
-          return of([] as Ticket[][]);
+        finalize(() => {
+          this.eventTicketLoading[event.tenantId] = false;
         })
       )
       .subscribe({
-        next: (ticketsPerEvent) => {
-          const enriched: Ticket[] = [];
-          const seenTicketKeys = new Set<string>();
-          
-          // Process tickets from each event
-          ticketsPerEvent.forEach((tickets, idx) => {
-            if (!tickets || !Array.isArray(tickets)) {
-              return;
-            }
-            
-            const ev = events[idx];
-            if (!ev || !ev.tenantId) {
-              return;
-            }
-            
-            tickets.forEach(t => {
-              if (!t || !t.eventId || !t.ticketNumber) {
-                return;
-              }
-              
-              // Create unique key for ticket
-              const ticketKey = `${t.eventId}-${t.ticketNumber}`;
-              
-              // Verify ticket belongs to this event and matches backend availability logic
-              // Backend filters: IsActive && !IsPurchased && TicketStatus == "Available"
-              const isBackendAvailable = !t.isPurchased && 
-                                        (t.isActive !== false) && 
-                                        t.ticketStatus === 'Available';
-              
-              if (t.eventId === ev.tenantId && 
-                  !seenTicketKeys.has(ticketKey) && 
-                  isBackendAvailable) {
-                seenTicketKeys.add(ticketKey);
-                
-                // Get matching event data
-                const matchingEvent = eventMap.get(t.eventId) || ev;
-                
-                // Enrich ticket with event data - matching backend DTO structure
-                const enrichedTicket: Ticket = {
-                  ...t,
-                  // Event data enrichment from EventDto
-                  eventName: matchingEvent.titre || 'Untitled Event',
-                  eventLocation: matchingEvent.location || 'TBD',
-                  eventDate: matchingEvent.startDate ? new Date(matchingEvent.startDate) : new Date(),
-                  imageUrl: matchingEvent.picture || '',
-                  category: matchingEvent.category || 'Other',
-                  // Preserve all TicketDto fields exactly as returned from backend
-                  tenantId: t.tenantId,
-                  userId: t.userId,
-                  eventId: t.eventId,
-                  ticketNumber: t.ticketNumber,
-                  ticketType: t.ticketType, // VIP, Standard, or Student
-                  price: t.price || 0, // Backend uses decimal
-                  quantity: t.quantity || 1, // Backend sets to 1 for individual tickets
-                  isPurchased: t.isPurchased || false,
-                  purchasedByUserId: t.purchasedByUserId,
-                  purchaseDate: t.purchaseDate,
-                  ticketStatus: t.ticketStatus || 'Available', // Available, Sold, etc.
-                  qrCode: t.qrCode || '', // Empty string for unpurchased tickets
-                  // Additional computed fields
-                  availableQuantity: t.quantity || 1,
-                  isActive: t.isActive !== undefined ? t.isActive : true
-                };
-                
-                enriched.push(enrichedTicket);
-              }
-            });
-          });
-          
-          // Sort tickets: Backend already orders by Price then TicketType
-          // Frontend sorts by event date first, then maintains backend price ordering
-          enriched.sort((a, b) => {
-            // First sort by event date
-            const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
-            const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
-            if (dateA !== dateB) {
-              return dateA - dateB;
-            }
-            // Then by price (matching backend ordering)
-            const priceDiff = (a.price || 0) - (b.price || 0);
-            if (priceDiff !== 0) {
-              return priceDiff;
-            }
-            // Finally by ticket type
-            return (a.ticketType || '').localeCompare(b.ticketType || '');
-          });
-          
-          this.tickets = enriched;
-          this.filteredTickets = [...this.tickets];
-          this.currentPage = 1;
-          this.isLoading = false;
-          
-          console.log(`✅ Successfully loaded ${enriched.length} unique tickets from ${events.length} events`);
+        next: (tickets) => {
+          const availableTicket = tickets?.find(t => this.ticketService.isTicketAvailable(t));
+
+          if (!availableTicket) {
+            alert('No tickets available for this event right now.');
+            return;
+          }
+
+          const enriched = this.buildTicketFromEvent(event, availableTicket);
+          this.ticketClick.emit(enriched);
         },
         error: (error) => {
-          console.error('❌ Error loading available tickets:', error);
-          this.tickets = [];
-          this.filteredTickets = [];
-          this.isLoading = false;
+          console.error('Error loading tickets for event:', error);
+          alert('Unable to load tickets for this event. Please try again later.');
         }
       });
   }
 
-  get paginatedTickets(): Ticket[] {
+  get paginatedEvents(): Event[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const endIndex = startIndex + this.itemsPerPage;
-    return this.filteredTickets.slice(startIndex, endIndex);
+    return this.filteredEvents.slice(startIndex, endIndex);
   }
 
   get totalPages(): number {
-    return Math.ceil(this.filteredTickets.length / this.itemsPerPage);
+    return Math.ceil(this.filteredEvents.length / this.itemsPerPage);
   }
 
   get pages(): number[] {
@@ -319,34 +214,98 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
     }
   }
 
-  private scrollToTop() {
-    // Scroll to the tickets grid section
+  private scrollToTop(): void {
     const element = document.querySelector('.browse-view');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
-  onTicketClick(ticket: Ticket) {
-    // Emit event to parent component to show ticket details modal
-    this.ticketClick.emit(ticket);
+  trackByEvent(_index: number, event: Event): string {
+    return event.tenantId;
   }
 
-  trackByPage(index: number, page: number): number {
+  trackByPage(_index: number, page: number): number {
     return page;
   }
 
-  // Expose ticket service helper methods for use in template if needed
-  isTicketAvailable(ticket: Ticket): boolean {
-    return this.ticketService.isTicketAvailable(ticket);
-  }
+  private filterEventsByAvailability(events: Event[], updateBaseList: boolean = true): void {
+    if (!events || events.length === 0) {
+      if (updateBaseList) {
+        this.events = [];
+      }
+      this.filteredEvents = [];
+      this.currentPage = 1;
+      this.isLoading = false;
+      return;
+    }
 
-  getTicketPriceDisplay(ticket: Ticket): string {
-    return this.ticketService.getTicketPriceDisplay(ticket);
-  }
+    const availabilityRequests = events
+      .filter(event => !!event?.tenantId)
+      .map(event => 
+        this.ticketService.getAvailableTickets(event.tenantId).pipe(
+          map(tickets => {
+            const totalQuantity = tickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
+            const hasTickets = tickets.some(ticket => this.ticketService.isTicketAvailable(ticket));
+            return {
+              event,
+              hasTickets,
+              availableCount: totalQuantity
+            };
+          }),
+          catchError(error => {
+            console.warn(`Error checking tickets for event ${event.tenantId}:`, error);
+            return of({ event, hasTickets: false, availableCount: 0 });
+          })
+        )
+      );
 
-  getTicketDisplayName(ticket: Ticket): string {
-    return this.ticketService.getTicketDisplayName(ticket);
+    if (availabilityRequests.length === 0) {
+      if (updateBaseList) {
+        this.events = [];
+      }
+      this.filteredEvents = [];
+      this.currentPage = 1;
+      this.isLoading = false;
+      return;
+    }
+
+    forkJoin(availabilityRequests)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (results) => {
+          const availabilityMap = results.reduce((acc, result) => {
+            if (result.event?.tenantId) {
+              acc[result.event.tenantId] = result.availableCount ?? 0;
+            }
+            return acc;
+          }, {} as Record<string, number>);
+
+          this.eventAvailableQuantities = updateBaseList
+            ? availabilityMap
+            : { ...this.eventAvailableQuantities, ...availabilityMap };
+
+          const availableEvents = results
+            .filter(result => result.hasTickets && (result.availableCount ?? 0) > 0)
+            .map(result => result.event);
+
+          if (updateBaseList) {
+            this.events = availableEvents;
+          }
+
+          this.filteredEvents = [...availableEvents];
+          this.currentPage = 1;
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error filtering events by availability:', error);
+          if (updateBaseList) {
+            this.events = [];
+          }
+          this.filteredEvents = [];
+          this.isLoading = false;
+        }
+      });
   }
 
   ngOnDestroy(): void {

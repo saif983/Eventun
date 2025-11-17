@@ -163,6 +163,74 @@ namespace EventunBackend.Controllers
             return Ok(ticketDto);
         }
 
+        // POST: api/ticket/purchase-bulk
+        [HttpPost("purchase-bulk")]
+        [Authorize(Roles = Roles.User)]
+        public async Task<ActionResult<IEnumerable<TicketDto>>> PurchaseTicketsBulk(
+            PurchaseTicketsBulkDto purchaseDto,
+            CancellationToken cancellationToken = default)
+        {
+            if (!await IsUserOrOwnerAsync(cancellationToken))
+                return Forbid();
+
+            if (!ModelState.IsValid || purchaseDto.Items == null || purchaseDto.Items.Count == 0)
+                return BadRequest("Invalid purchase payload");
+
+            var currentUserId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(currentUserId))
+                return BadRequest("Invalid user information");
+
+            var results = new List<TicketDto>();
+
+            foreach (var item in purchaseDto.Items)
+            {
+                var ticket = await _context.Tickets
+                    .FirstOrDefaultAsync(t => t.TenantId == item.TicketId && t.IsActive, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (ticket == null)
+                    return NotFound($"Ticket not found: {item.TicketId}");
+
+                if (ticket.TicketStatus != "Available")
+                    return BadRequest($"Ticket not available: {item.TicketId}");
+
+                if (item.Quantity <= 0)
+                    return BadRequest("Quantity must be at least 1");
+
+                if (ticket.Quantity < item.Quantity)
+                    return BadRequest($"Not enough quantity available for ticket {item.TicketId}");
+
+                ticket.Quantity -= item.Quantity;
+                ticket.PurchasedByUserId = currentUserId;
+                ticket.PurchaseDate = DateTime.UtcNow;
+                if (ticket.Quantity <= 0)
+                {
+                    ticket.IsPurchased = true;
+                    ticket.TicketStatus = "Sold";
+                }
+
+                results.Add(new TicketDto
+                {
+                    TenantId = ticket.TenantId,
+                    UserId = ticket.UserId,
+                    EventId = ticket.EventId,
+                    TicketNumber = ticket.TicketNumber,
+                    TicketType = ticket.TicketType,
+                    Price = ticket.Price,
+                    Quantity = item.Quantity,
+                    IsPurchased = ticket.IsPurchased,
+                    PurchasedByUserId = ticket.PurchasedByUserId,
+                    PurchaseDate = ticket.PurchaseDate,
+                    QRCode = ticket.QRCode,
+                    TicketStatus = ticket.TicketStatus
+                });
+            }
+
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return Ok(results);
+        }
+
         // POST: api/ticket
         [HttpPost]
         [Authorize(Roles = Roles.Owner)]
@@ -262,17 +330,20 @@ namespace EventunBackend.Controllers
             if (ticket == null)
                 return NotFound("Ticket not found");
 
-            if (ticket.IsPurchased)
-                return BadRequest("Ticket is already purchased");
-
             if (ticket.TicketStatus != "Available")
                 return BadRequest("Ticket is not available for purchase");
 
-            // Update ticket as purchased
-            ticket.IsPurchased = true;
+            if (ticket.Quantity <= 0)
+                return BadRequest("Ticket is sold out");
+
+            ticket.Quantity -= 1;
             ticket.PurchasedByUserId = currentUserId;
             ticket.PurchaseDate = DateTime.UtcNow;
-            ticket.TicketStatus = "Sold";
+            if (ticket.Quantity <= 0)
+            {
+                ticket.IsPurchased = true;
+                ticket.TicketStatus = "Sold";
+            }
 
             await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -307,8 +378,8 @@ namespace EventunBackend.Controllers
             var tickets = await _context.Tickets
                 .Where(t => t.EventId == eventId && 
                            t.IsActive && 
-                           !t.IsPurchased && 
-                           t.TicketStatus == "Available")
+                           t.TicketStatus == "Available" &&
+                           t.Quantity > 0)
                 .OrderBy(t => t.Price) // Order by price ascending for better UX
                 .ThenBy(t => t.TicketType) // Then by ticket type
                 .Select(t => new TicketDto
