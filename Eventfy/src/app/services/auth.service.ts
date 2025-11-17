@@ -128,4 +128,9 @@ export class AuthService {
       });
     });
   }
+
+  // Test private-scoped endpoint (requires read:events permission)
+  testPrivateScoped(): Observable<any> {
+    return this.apiService.getPrivateScoped();
+  }
 }

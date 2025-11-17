@@ -32,12 +32,25 @@
       <span>{{ ticket.eventDate ? formatDate(ticket.eventDate) : 'TBD' }}</span>
     </div>
     <div class="flex justify-between items-center">
-      <div class="text-sm text-gray-500">
-        <i class="fas fa-ticket-alt mr-1"></i>
-        <span>{{ ticket.quantity || ticket.availableQuantity || 0 }} tickets left</span>
+      <div class="flex flex-col">
+        <div class="text-sm text-gray-500 mb-1">
+          <i class="fas fa-ticket-alt mr-1"></i>
+          <span *ngIf="isTicketAvailable()">Available</span>
+          <span *ngIf="!isTicketAvailable()" [class]="getTicketStatusBadge()" class="px-2 py-1 rounded text-xs font-medium">
+            {{ getTicketStatusText() }}
+          </span>
+        </div>
+        <div class="text-xs text-gray-400" *ngIf="ticket.ticketNumber">
+          #{{ ticket.ticketNumber }}
+        </div>
       </div>
-      <button (click)="onViewDetails()" class="view-details-btn">
-        View Details
+      <button 
+        (click)="onViewDetails()" 
+        [disabled]="!isTicketAvailable()"
+        [class.opacity-50]="!isTicketAvailable()"
+        [class.cursor-not-allowed]="!isTicketAvailable()"
+        class="view-details-btn">
+        {{ isTicketAvailable() ? 'View Details' : 'Unavailable' }}
       </button>
     </div>
   </div>

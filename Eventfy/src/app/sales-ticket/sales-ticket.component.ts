@@ -72,11 +72,18 @@ export class SalesTicketComponent implements OnInit {
 
   addToCart() {
     if (this.selectedTicket && this.selectedQuantity > 0) {
+      // Verify ticket is available before adding to cart
+      if (!this.cartService.isTicketAvailable(this.selectedTicket)) {
+        // Ticket is not available - could show a toast notification here
+        console.warn('Ticket is not available for purchase');
+        return;
+      }
+      
       this.cartService.addToCart(this.selectedTicket, this.selectedQuantity);
       this.closeTicketModal();
       
-      // Show success message
-      alert(`${this.selectedQuantity} ticket(s) added to cart!`);
+      // Success - ticket added to cart (could show toast notification here)
+      console.log(`${this.selectedQuantity} ticket(s) added to cart!`);
     }
   }
 

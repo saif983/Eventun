@@ -89,8 +89,11 @@ export class CheckoutComponent implements OnInit {
   }
 
   private generateOrderId(): string {
-    return 'TKT-' + new Date().getFullYear() + '-' + 
-           String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    // Generate order ID using timestamp and random component
+    // In production, this could come from backend order creation
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substr(2, 5).toUpperCase();
+    return `ORD-${timestamp}-${random}`;
   }
 
   private markFormGroupTouched() {

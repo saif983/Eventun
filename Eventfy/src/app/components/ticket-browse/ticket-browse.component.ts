@@ -50,6 +50,7 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
 
   private loadTickets() {
     this.isLoading = true;
+    // Use the same approach as home component - direct subscription
     this.eventService.getEvents()
       .pipe(
         takeUntil(this.destroy$),
@@ -58,12 +59,12 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
           this.isLoading = false;
           this.tickets = [];
           this.filteredTickets = [];
-          return of([]);
+          return of([] as Event[]);
         })
       )
       .subscribe({
         next: (events) => {
-          if (events.length > 0) {
+          if (events && events.length > 0) {
             this.fetchAvailableTicketsForEvents(events);
           } else {
             this.isLoading = false;
@@ -90,6 +91,7 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
         category: this.selectedCategory !== 'all' ? this.selectedCategory : undefined
       };
       this.isLoading = true;
+      // Use the same direct subscription approach as home component
       this.eventService.searchEvents(searchDto)
         .pipe(
           takeUntil(this.destroy$),
@@ -97,12 +99,12 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
             console.error('Error searching events:', error);
             this.filteredTickets = [];
             this.isLoading = false;
-            return of([]);
+            return of([] as Event[]);
           })
         )
         .subscribe({
           next: (events) => {
-            if (events.length > 0) {
+            if (events && events.length > 0) {
               this.fetchAvailableTicketsForEvents(events);
             } else {
               this.isLoading = false;
@@ -111,26 +113,46 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
           }
         });
     } else {
+      // Reset to all tickets when no filters
       this.filteredTickets = [...this.tickets];
       this.currentPage = 1;
     }
   }
 
+  /**
+   * Fetches available tickets for multiple events
+   * Uses backend API: GET /api/ticket/available/{eventId}
+   * Backend filters: IsActive && !IsPurchased && TicketStatus == "Available"
+   * Backend orders by: Price (ascending), then TicketType
+   * Ticket types: VIP, Standard, Student (from TicketType constants)
+   */
   private fetchAvailableTicketsForEvents(events: Event[]) {
+    if (!events || events.length === 0) {
+      this.tickets = [];
+      this.filteredTickets = [];
+      this.isLoading = false;
+      return;
+    }
+
     // Create a map of eventId to event for quick lookup
     const eventMap = new Map<string, Event>();
     events.forEach(ev => {
-      eventMap.set(ev.tenantId, ev);
+      if (ev && ev.tenantId) {
+        eventMap.set(ev.tenantId, ev);
+      }
     });
     
-    const requests = events.map(e => 
-      this.ticketService.getAvailableTickets(e.tenantId).pipe(
-        catchError(error => {
-          console.error(`Error loading tickets for event ${e.tenantId}:`, error);
-          return of([] as Ticket[]);
-        })
-      )
-    );
+    // Create requests for all events - using the same pattern as home component
+    const requests = events
+      .filter(e => e && e.tenantId)
+      .map(e => 
+        this.ticketService.getAvailableTickets(e.tenantId).pipe(
+          catchError(error => {
+            console.warn(`Error loading tickets for event ${e.tenantId}:`, error);
+            return of([] as Ticket[]);
+          })
+        )
+      );
     
     if (requests.length === 0) {
       this.tickets = [];
@@ -139,49 +161,79 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
       return;
     }
     
+    // Use forkJoin to fetch all tickets in parallel - similar to how home loads events
     forkJoin(requests)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(error => {
+          console.error('Error in forkJoin for tickets:', error);
+          this.tickets = [];
+          this.filteredTickets = [];
+          this.isLoading = false;
+          return of([] as Ticket[][]);
+        })
+      )
       .subscribe({
         next: (ticketsPerEvent) => {
           const enriched: Ticket[] = [];
-          const seenTicketIds = new Set<string>(); // Track unique tickets to avoid duplicates
+          const seenTicketKeys = new Set<string>();
           
+          // Process tickets from each event
           ticketsPerEvent.forEach((tickets, idx) => {
+            if (!tickets || !Array.isArray(tickets)) {
+              return;
+            }
+            
             const ev = events[idx];
+            if (!ev || !ev.tenantId) {
+              return;
+            }
+            
             tickets.forEach(t => {
-              // Ensure ticket belongs to this event and is unique
-              // Use ticketNumber as unique identifier since tenantId might not be unique
+              if (!t || !t.eventId || !t.ticketNumber) {
+                return;
+              }
+              
+              // Create unique key for ticket
               const ticketKey = `${t.eventId}-${t.ticketNumber}`;
               
+              // Verify ticket belongs to this event and matches backend availability logic
+              // Backend filters: IsActive && !IsPurchased && TicketStatus == "Available"
+              const isBackendAvailable = !t.isPurchased && 
+                                        (t.isActive !== false) && 
+                                        t.ticketStatus === 'Available';
+              
               if (t.eventId === ev.tenantId && 
-                  !seenTicketIds.has(ticketKey) && 
-                  this.ticketService.isTicketAvailable(t)) {
-                seenTicketIds.add(ticketKey);
+                  !seenTicketKeys.has(ticketKey) && 
+                  isBackendAvailable) {
+                seenTicketKeys.add(ticketKey);
                 
-                // Match ticket to event by eventId to ensure correct data
+                // Get matching event data
                 const matchingEvent = eventMap.get(t.eventId) || ev;
                 
-                // Preserve all original ticket data and enrich with event data
+                // Enrich ticket with event data - matching backend DTO structure
                 const enrichedTicket: Ticket = {
                   ...t,
-                  // Event enrichment data
-                  eventName: matchingEvent.titre,
+                  // Event data enrichment from EventDto
+                  eventName: matchingEvent.titre || 'Untitled Event',
                   eventLocation: matchingEvent.location || 'TBD',
-                  eventDate: new Date(matchingEvent.startDate),
-                  imageUrl: matchingEvent.picture,
-                  category: matchingEvent.category,
-                  // Ensure all ticket-specific fields are preserved
+                  eventDate: matchingEvent.startDate ? new Date(matchingEvent.startDate) : new Date(),
+                  imageUrl: matchingEvent.picture || '',
+                  category: matchingEvent.category || 'Other',
+                  // Preserve all TicketDto fields exactly as returned from backend
                   tenantId: t.tenantId,
                   userId: t.userId,
                   eventId: t.eventId,
                   ticketNumber: t.ticketNumber,
-                  ticketType: t.ticketType,
-                  price: t.price,
-                  quantity: t.quantity || 1, // Ensure quantity is set
+                  ticketType: t.ticketType, // VIP, Standard, or Student
+                  price: t.price || 0, // Backend uses decimal
+                  quantity: t.quantity || 1, // Backend sets to 1 for individual tickets
                   isPurchased: t.isPurchased || false,
-                  ticketStatus: t.ticketStatus,
-                  qrCode: t.qrCode || '',
-                  // Additional fields
+                  purchasedByUserId: t.purchasedByUserId,
+                  purchaseDate: t.purchaseDate,
+                  ticketStatus: t.ticketStatus || 'Available', // Available, Sold, etc.
+                  qrCode: t.qrCode || '', // Empty string for unpurchased tickets
+                  // Additional computed fields
                   availableQuantity: t.quantity || 1,
                   isActive: t.isActive !== undefined ? t.isActive : true
                 };
@@ -191,11 +243,22 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
             });
           });
           
-          // Sort tickets by event date for better UX
+          // Sort tickets: Backend already orders by Price then TicketType
+          // Frontend sorts by event date first, then maintains backend price ordering
           enriched.sort((a, b) => {
+            // First sort by event date
             const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
             const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
-            return dateA - dateB;
+            if (dateA !== dateB) {
+              return dateA - dateB;
+            }
+            // Then by price (matching backend ordering)
+            const priceDiff = (a.price || 0) - (b.price || 0);
+            if (priceDiff !== 0) {
+              return priceDiff;
+            }
+            // Finally by ticket type
+            return (a.ticketType || '').localeCompare(b.ticketType || '');
           });
           
           this.tickets = enriched;
@@ -203,26 +266,10 @@ export class TicketBrowseComponent implements OnInit, OnDestroy {
           this.currentPage = 1;
           this.isLoading = false;
           
-          // Debug logging
-          console.log(`Loaded ${enriched.length} unique tickets from ${events.length} events`);
-          if (enriched.length > 0) {
-            console.log('Sample ticket data:', {
-              eventName: enriched[0].eventName,
-              ticketType: enriched[0].ticketType,
-              price: enriched[0].price,
-              ticketNumber: enriched[0].ticketNumber,
-              quantity: enriched[0].quantity,
-              eventId: enriched[0].eventId
-            });
-            // Log unique ticket types and prices
-            const uniqueTypes = new Set(enriched.map(t => t.ticketType));
-            const uniquePrices = new Set(enriched.map(t => t.price));
-            console.log(`Unique ticket types: ${Array.from(uniqueTypes).join(', ')}`);
-            console.log(`Unique prices: ${Array.from(uniquePrices).join(', ')}`);
-          }
+          console.log(`✅ Successfully loaded ${enriched.length} unique tickets from ${events.length} events`);
         },
         error: (error) => {
-          console.error('Error loading available tickets:', error);
+          console.error('❌ Error loading available tickets:', error);
           this.tickets = [];
           this.filteredTickets = [];
           this.isLoading = false;

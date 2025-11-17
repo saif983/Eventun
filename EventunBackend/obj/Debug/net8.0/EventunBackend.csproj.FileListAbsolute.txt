@@ -159,3 +159,4 @@ C:\Users\saif\Music\Saas\enventfy\EventunBackend\obj\Debug\net8.0\EventunB.D9B6D
 C:\Users\saif\Music\Saas\enventfy\EventunBackend\obj\Debug\net8.0\EventunBackend.genruntimeconfig.cache
 C:\Users\saif\Music\Saas\enventfy\EventunBackend\obj\Debug\net8.0\ref\EventunBackend.dll
 C:\Users\saif\Music\Saas\enventfy\EventunBackend\bin\Debug\net8.0\Microsoft.Bcl.Memory.dll
+C:\Users\saif\Music\Saas\enventfy\EventunBackend\obj\Debug\net8.0\EventunBackend.sourcelink.json

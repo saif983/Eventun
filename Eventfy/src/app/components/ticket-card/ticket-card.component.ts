@@ -18,11 +18,11 @@ export class TicketCardComponent {
   }
 
   getTicketTypeColor(type: string): string {
-    switch (type) {
+    // Match backend TicketType constants: VIP, Standard, Student
+    switch (type?.toUpperCase()) {
       case 'VIP': return 'bg-purple-100 text-purple-800';
-      case 'Premium': return 'bg-yellow-100 text-yellow-800';
-      case 'General': return 'bg-blue-100 text-blue-800';
-      case 'Student': return 'bg-orange-100 text-orange-800';
+      case 'STANDARD': return 'bg-blue-100 text-blue-800';
+      case 'STUDENT': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   }
@@ -38,14 +38,35 @@ export class TicketCardComponent {
   }
 
   formatPrice(price: number): string {
-    return `$${price.toFixed(0)}`;
+    // Format price with 2 decimal places, matching backend decimal type
+    return `$${price.toFixed(2)}`;
   }
 
   getDisplayPrice(): number {
-    return this.ticket.price || this.ticket.sellingPrice || this.ticket.originalPrice || 0;
+    // Backend returns Price as decimal, use it directly
+    return this.ticket.price || 0;
   }
 
   isTicketAvailable(): boolean {
-    return !this.ticket.isPurchased && (this.ticket.isActive ?? true) && (this.ticket.quantity || this.ticket.availableQuantity || 0) > 0;
+    // Match backend logic: IsActive && !IsPurchased && TicketStatus == "Available"
+    // Backend sets Quantity = 1 for each individual ticket
+    return !this.ticket.isPurchased && 
+           (this.ticket.isActive ?? true) && 
+           this.ticket.ticketStatus === 'Available' &&
+           (this.ticket.quantity || 0) > 0;
+  }
+
+  getTicketStatusBadge(): string {
+    // Display ticket status based on backend TicketStatus field
+    switch (this.ticket.ticketStatus?.toLowerCase()) {
+      case 'available': return 'bg-green-100 text-green-800';
+      case 'sold': return 'bg-red-100 text-red-800';
+      case 'reserved': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  getTicketStatusText(): string {
+    return this.ticket.ticketStatus || 'Unknown';
   }
 }

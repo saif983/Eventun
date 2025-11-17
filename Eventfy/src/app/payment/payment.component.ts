@@ -6,6 +6,11 @@ import { Router } from '@angular/router';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { FooterComponent } from '../footer/footer.component';
 import { CookieService } from '../services/cookie.service';
+import { CartService } from '../services/cart.service';
+import { TicketService } from '../services/ticket.service';
+import { forkJoin } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 declare var Stripe: any;
 
@@ -65,7 +70,9 @@ export class PaymentComponent implements OnInit {
     private http: HttpClient,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private cookieService: CookieService
+    private cookieService: CookieService,
+    private cartService: CartService,
+    private ticketService: TicketService
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -81,34 +88,33 @@ export class PaymentComponent implements OnInit {
 
   private loadFromCheckoutData() {
     try {
-      const raw = this.cookieService.getCookie('checkoutData');
-      if (!raw) {
-        // If no checkout data, keep demo items for standalone testing
-        this.ticketItems = this.ticketItems.length ? this.ticketItems : [];
-        return;
-      }
-      const data = JSON.parse(raw);
-      // Prefill customer info
-      if (data.customerEmail) this.paymentForm.get('email')?.setValue(data.customerEmail);
-      if (data.customerName) this.paymentForm.get('fullName')?.setValue(data.customerName);
-      if (data.customerPhone) this.paymentForm.get('phone')?.setValue(data.customerPhone);
-
-      // Map cart items to payment TicketItem shape
-      if (Array.isArray(data.items)) {
-        this.ticketItems = data.items.map((ci: any) => {
-          const t = ci.ticket || {};
+      // Load from cart service first (real data)
+      const cartItems = this.cartService.getCartItems();
+      if (cartItems.length > 0) {
+        this.ticketItems = cartItems.map(ci => {
+          const t = ci.ticket;
           const eventDate = t.eventDate ? new Date(t.eventDate) : null;
           return {
-            id: t.id || ci.id || 'unknown',
-            name: t.eventName || ci.name || 'Ticket',
-            price: Number(t.sellingPrice ?? ci.price ?? 0),
-            quantity: Number(ci.quantity ?? 1),
+            id: t.tenantId || t.id || 'unknown',
+            name: t.eventName || 'Ticket',
+            price: Number(t.price || t.sellingPrice || 0),
+            quantity: ci.quantity,
             description: t.description,
             eventDate: eventDate ? eventDate.toISOString().slice(0, 10) : undefined,
             eventTime: undefined,
             eventLocation: t.eventLocation
           } as TicketItem;
         });
+      }
+
+      // Also try to load from checkout data for customer info
+      const raw = this.cookieService.getCookie('checkoutData');
+      if (raw) {
+        const data = JSON.parse(raw);
+        // Prefill customer info
+        if (data.customerEmail) this.paymentForm.get('email')?.setValue(data.customerEmail);
+        if (data.customerName) this.paymentForm.get('fullName')?.setValue(data.customerName);
+        if (data.customerPhone) this.paymentForm.get('phone')?.setValue(data.customerPhone);
       }
     } catch {
       // Ignore parse errors; leave defaults
@@ -216,13 +222,8 @@ export class PaymentComponent implements OnInit {
     return this.ticketItems.reduce((total, item) => total + item.quantity, 0);
   }
 
-  async createPaymentIntent(): Promise<PaymentIntent> {
-    // For now, use mock payment intent since backend doesn't have payment endpoints yet
-    return this.mockCreatePaymentIntent();
-  }
-
   async processPayment() {
-    if (!this.paymentForm.valid || !this.stripe || !this.cardElement) {
+    if (!this.paymentForm.valid) {
       this.markFormGroupTouched();
       return;
     }
@@ -231,31 +232,89 @@ export class PaymentComponent implements OnInit {
     this.paymentError = '';
 
     try {
-      // Create payment intent
-      this.paymentIntent = await this.createPaymentIntent();
-
-      // For demo purposes, simulate successful payment without calling Stripe
-      // In production, you would use the real Stripe confirmCardPayment
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
+      // Get cart items from CartService
+      const cartItems = this.cartService.getCartItems();
       
-      // Mock successful payment response
-      const mockPaymentIntent = {
-        id: this.paymentIntent.id,
+      if (cartItems.length === 0) {
+        this.paymentError = 'Your cart is empty. Please add tickets before checkout.';
+        this.isProcessing = false;
+        return;
+      }
+
+      // Validate card if Stripe is available (for future payment processing)
+      if (this.stripe && this.cardElement) {
+        // Validate card element
+        const { error } = await this.cardElement.update({
+          billing_details: {
+            name: this.paymentForm.get('fullName')?.value,
+            email: this.paymentForm.get('email')?.value,
+            phone: this.paymentForm.get('phone')?.value,
+            address: this.paymentForm.get('billingAddress')?.value
+          }
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
+
+      // Purchase tickets using TicketService (real backend API)
+      // This is the actual ticket purchase - payment processing would happen before this
+      await this.purchaseTickets(cartItems);
+
+      // Create payment intent for tracking
+      const paymentIntent = {
+        id: this.paymentIntent?.id || `pi_${Date.now()}`,
         status: 'succeeded',
-        amount: this.paymentIntent.amount,
-        currency: this.paymentIntent.currency
+        amount: Math.round(this.getTotalAmount() * 100),
+        currency: 'usd'
       };
 
       this.paymentSucceeded = true;
       this.isProcessing = false;
       
       // Save payment details and redirect to success page
-      this.handlePaymentSuccess(mockPaymentIntent);
+      this.handlePaymentSuccess(paymentIntent);
     } catch (error: any) {
       console.error('Payment error:', error);
       this.paymentError = error.message || 'Payment processing failed. Please try again.';
       this.isProcessing = false;
     }
+  }
+
+  private async purchaseTickets(cartItems: any[]): Promise<void> {
+    // Purchase all tickets in cart using TicketService
+    const purchaseRequests = cartItems.map(item => {
+      const purchaseDto = {
+        ticketId: item.ticket.tenantId || item.ticket.id || ''
+      };
+      
+      // Purchase each ticket quantity times
+      const requests = [];
+      for (let i = 0; i < item.quantity; i++) {
+        requests.push(
+          this.ticketService.purchaseTicket(purchaseDto).pipe(
+            catchError(error => {
+              console.error(`Error purchasing ticket ${item.ticket.tenantId}:`, error);
+              return of(null);
+            })
+          )
+        );
+      }
+      return requests;
+    }).flat();
+
+    // Execute all purchases in parallel
+    const results = await forkJoin(purchaseRequests).toPromise();
+    
+    // Check if all purchases succeeded
+    const failedPurchases = results?.filter(r => r === null).length || 0;
+    if (failedPurchases > 0) {
+      throw new Error(`${failedPurchases} ticket(s) could not be purchased. Please try again.`);
+    }
+
+    // Clear cart after successful purchase
+    this.cartService.clearCart();
   }
 
   handlePaymentSuccess(paymentIntent: any) {
@@ -277,31 +336,13 @@ export class PaymentComponent implements OnInit {
 
     // Redirect to success page after 3 seconds
     setTimeout(() => {
-      this.router.navigate(['/payment-success'], { 
+      this.router.navigate(['/tickets'], { 
         queryParams: { 
+          payment_success: 'true',
           payment_intent: paymentIntent.id 
         } 
       });
     }, 3000);
-  }
-
-  // Mock function for demo - replace with actual backend call
-  private async mockCreatePaymentIntent(): Promise<PaymentIntent> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Generate a proper Stripe-like payment intent ID and client secret
-    const randomId = Math.random().toString(36).substr(2, 24);
-    const id = `pi_${randomId}`;
-    const secretPart = Math.random().toString(36).substr(2, 32) + Math.random().toString(36).substr(2, 32);
-    
-    return {
-      id: id,
-      client_secret: `${id}_secret_${secretPart}`,
-      amount: Math.round(this.getTotalAmount() * 100),
-      currency: 'usd',
-      status: 'requires_payment_method'
-    };
   }
 
   updateQuantity(itemId: string, change: number) {

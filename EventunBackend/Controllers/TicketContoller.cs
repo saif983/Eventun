@@ -296,6 +296,8 @@ namespace EventunBackend.Controllers
         }
 
         // GET: api/ticket/available/{eventId}
+        // Returns all available tickets for a specific event (public endpoint)
+        // Filters: IsActive && !IsPurchased && TicketStatus == "Available"
         [HttpGet("available/{eventId}")]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<TicketDto>>> GetAvailableTickets(
@@ -307,6 +309,8 @@ namespace EventunBackend.Controllers
                            t.IsActive && 
                            !t.IsPurchased && 
                            t.TicketStatus == "Available")
+                .OrderBy(t => t.Price) // Order by price ascending for better UX
+                .ThenBy(t => t.TicketType) // Then by ticket type
                 .Select(t => new TicketDto
                 {
                     TenantId = t.TenantId,

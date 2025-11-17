@@ -5,6 +5,9 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { FooterComponent } from '../footer/footer.component';
 import { CookieService } from '../services/cookie.service';
+import { TicketService } from '../services/ticket.service';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 interface QRCodeResponse {
   type: string;
@@ -58,7 +61,8 @@ export class QrCheckinComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private cookieService: CookieService
+    private cookieService: CookieService,
+    private ticketService: TicketService
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }

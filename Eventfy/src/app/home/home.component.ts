@@ -90,7 +90,7 @@ export class HomeComponent implements OnInit {
   ];
 
   // Portfolio Section Data
-  portfolioItems: Array<{ image?: string; title: string; category?: string; icon?: string; attendees?: string; location?: string; description?: string; revenue?: string; }> = [];
+  portfolioItems: Array<{ image?: string; title: string; category?: string; icon?: string; attendees?: string; location?: string; description?: string; revenue?: string; eventId?: string; tenantId?: string; }> = [];
 
   // Contact Information
   contactInfo = [
@@ -239,12 +239,41 @@ export class HomeComponent implements OnInit {
           icon: 'fas fa-calendar-alt',
           attendees: e.ticketQte ? `${e.ticketQte}+` : undefined,
           location: e.location,
-          description: e.description
+          description: e.description,
+          eventId: e.tenantId,
+          tenantId: e.tenantId
         }));
       },
       error: () => {
         this.portfolioItems = [];
       }
     });
+  }
+
+  viewEventDetails(item: { eventId?: string; tenantId?: string; title?: string }) {
+    // Navigate to tickets/store page where users can browse and view event details
+    // Since there's no dedicated event details page, navigate to the ticket store
+    // Users can search for the event there or browse available tickets
+    this.router.navigate(['/tickets'], {
+      queryParams: {
+        event: item.eventId || item.tenantId || '',
+        search: item.title || ''
+      }
+    });
+  }
+
+  getQuote(item: { title?: string }) {
+    // Scroll to contact form section for quote request
+    this.scrollToSection('contact');
+    
+    // Pre-fill the event type in the contact form if available
+    if (item.title) {
+      this.contactForm.patchValue({
+        eventType: item.title.toLowerCase().includes('music') ? 'concert' :
+                   item.title.toLowerCase().includes('sport') ? 'sports' :
+                   item.title.toLowerCase().includes('conference') ? 'conference' : 'other',
+        message: `I'm interested in getting a quote for an event similar to: ${item.title}`
+      });
+    }
   }
 }

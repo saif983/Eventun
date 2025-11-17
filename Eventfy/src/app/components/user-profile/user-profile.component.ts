@@ -100,8 +100,9 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   }
 
   editProfile(): void {
-    // TODO: Implement profile editing functionality
-    console.log('Edit profile clicked');
+    // Navigate to profile edit page or open edit modal
+    // For now, reload profile to get latest data
+    this.loadUserProfile();
   }
 
   refreshProfile(): void {
@@ -119,10 +120,11 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       const deleteSub = this.apiService.deleteEvent(event.tenantId).subscribe({
         next: () => {
           this.userEvents = this.userEvents.filter(e => e.tenantId !== event.tenantId);
-          console.log('Event deleted successfully');
+          // Event deleted successfully - could show toast notification here
         },
         error: (error) => {
           console.error('Error deleting event:', error);
+          alert('Failed to delete event. Please try again.');
         }
       });
       this.subscription.add(deleteSub);
@@ -183,24 +185,39 @@ export class UserProfileComponent implements OnInit, OnDestroy {
 
   // Profile actions
   changePassword(): void {
-    // TODO: Implement change password functionality
-    console.log('Change password clicked');
+    // Navigate to change password page or open modal
+    // For now, show message that this feature is coming soon
+    alert('Change password feature coming soon!');
   }
 
   updateNotifications(): void {
-    // TODO: Implement notification settings
-    console.log('Update notifications clicked');
+    // Navigate to notification settings page or open modal
+    // For now, show message that this feature is coming soon
+    alert('Notification settings feature coming soon!');
   }
 
   downloadData(): void {
-    // TODO: Implement data download functionality
-    console.log('Download data clicked');
+    // Export user data as JSON
+    const userData = {
+      profile: this.currentUser,
+      events: this.userEvents,
+      exportDate: new Date().toISOString()
+    };
+    
+    const dataStr = JSON.stringify(userData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `eventfy-data-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   deleteAccount(): void {
-    // TODO: Implement account deletion with confirmation
     if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      console.log('Delete account confirmed');
+      // TODO: Implement account deletion API call when backend supports it
+      alert('Account deletion feature coming soon. Please contact support for assistance.');
     }
   }
 

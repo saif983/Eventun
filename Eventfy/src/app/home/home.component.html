@@ -175,8 +175,8 @@
           </div>
           <p class="portfolio-description">{{ item.description }}</p>
           <div class="portfolio-actions">
-            <button class="btn-secondary btn-sm">View Details</button>
-            <button class="btn-primary btn-sm">Get Quote</button>
+            <button class="btn-secondary btn-sm" (click)="viewEventDetails(item)">View Details</button>
+            <button class="btn-primary btn-sm" (click)="getQuote(item)">Get Quote</button>
           </div>
         </div>
       </div>

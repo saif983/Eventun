@@ -31,6 +31,10 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/private`, { headers: this.getHeaders() });
   }
 
+  getPrivateScoped(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/private-scoped`, { headers: this.getHeaders() });
+  }
+
   getUserProfile(): Observable<AuthResponse> {
     return this.http.get<AuthResponse>(`${this.baseUrl}/user-profile`, { headers: this.getHeaders() });
   }
