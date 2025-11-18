@@ -82,7 +82,7 @@
             <div class="text-right">
               <p class="text-sm font-medium text-purple-600">From {{ event.ticketPrice || 'N/A' }} DH</p>
               <p class="text-xs text-gray-400">
-                {{ eventAvailableQuantities[event.tenantId] ?? event.ticketQte || 0 }} ticket(s)
+                {{ eventAvailableQuantities[event.tenantId] || event.ticketQte || 0 }} ticket(s)
               </p>
             </div>
           </div>

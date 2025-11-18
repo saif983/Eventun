@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EventunBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0919050102017a6e2dc57d90a7605f3483dd3e1c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb20b77326de17be03b5fc91466eded23999814e")]
 [assembly: System.Reflection.AssemblyProductAttribute("EventunBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EventunBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
