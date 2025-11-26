@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
@@ -14,18 +15,32 @@ import { ApiService } from './api.service';
 export class EventService {
   private eventsSubject = new BehaviorSubject<Event[]>([]);
   public events$ = this.eventsSubject.asObservable();
+  private eventsLoaded = false;
 
-  constructor(private apiService: ApiService) {
-    this.loadEvents();
+  constructor(
+    private apiService: ApiService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    // Only load events in browser, not during SSR/prerendering
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadEvents();
+    }
   }
 
   loadEvents(): void {
+    // Prevent multiple concurrent load attempts
+    if (this.eventsLoaded) {
+      return;
+    }
+    this.eventsLoaded = true;
+
     this.apiService.getEvents().subscribe({
       next: (events) => {
         this.eventsSubject.next(events);
       },
       error: (error) => {
         console.error('Error loading events:', error);
+        this.eventsLoaded = false; // Allow retry on error
       }
     });
   }
