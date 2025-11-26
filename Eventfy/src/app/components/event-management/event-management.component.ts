@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { EventService } from '../../services/event.service';
 import { AuthService } from '../../services/auth.service';
@@ -17,12 +17,15 @@ export class EventManagementComponent implements OnInit {
   showCreateForm = false;
   eventForm: FormGroup;
   editingEvent: Event | null = null;
+  private isBrowser: boolean;
 
   constructor(
     private eventService: EventService,
     public authService: AuthService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
     this.eventForm = this.fb.group({
       titre: ['', Validators.required],
       eventOwner: ['', Validators.required],
@@ -38,7 +41,10 @@ export class EventManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadEvents();
+    // Only load events in browser, not during SSR/prerendering
+    if (this.isBrowser) {
+      this.loadEvents();
+    }
   }
 
   loadEvents(): void {

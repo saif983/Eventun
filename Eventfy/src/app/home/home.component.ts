@@ -1,12 +1,11 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { EventService } from '../services/event.service';
 import { Event } from '../models/event.model';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { FooterComponent } from '../footer/footer.component';
-import { isPlatformBrowser } from '@angular/common';
 
 @Component({
   selector: 'app-home',
@@ -127,7 +126,10 @@ export class HomeComponent implements OnInit {
 
   ngOnInit() {
     this.initForm();
-    this.loadPortfolioFromEvents();
+    // Only load portfolio in browser, not during SSR/prerendering
+    if (this.isBrowser) {
+      this.loadPortfolioFromEvents();
+    }
   }
 
   initForm() {
