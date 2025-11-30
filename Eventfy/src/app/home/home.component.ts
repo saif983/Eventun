@@ -20,6 +20,10 @@ export class HomeComponent implements OnInit {
   showSuccessModal: boolean = false;
   private isBrowser: boolean;
 
+  // PWA Install
+  showInstallButton: boolean = false;
+  private deferredPrompt: any;
+
   // Hero Section Data
   heroTitle = 'Professional Event Ticketing System';
   heroSubtitle = 'Our customizable ticketing platform helps you sell tickets, manage attendees, and streamline check-in for any event.';
@@ -116,7 +120,7 @@ export class HomeComponent implements OnInit {
   ];
 
   constructor(
-    private fb: FormBuilder, 
+    private fb: FormBuilder,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
     private eventService: EventService
@@ -129,6 +133,7 @@ export class HomeComponent implements OnInit {
     // Only load portfolio in browser, not during SSR/prerendering
     if (this.isBrowser) {
       this.loadPortfolioFromEvents();
+      this.setupPWAInstall();
     }
   }
 
@@ -169,7 +174,7 @@ export class HomeComponent implements OnInit {
   async onSubmit() {
     if (this.contactForm.valid) {
       this.isSubmitting = true;
-      
+
       try {
         // Prepare email data
         const formData = this.contactForm.value;
@@ -197,20 +202,20 @@ export class HomeComponent implements OnInit {
             Submitted on: ${new Date().toLocaleString()}
           `
         };
-        
+
         // Send email using mailto link (for now)
         if (this.isBrowser && typeof window !== 'undefined') {
           const mailtoLink = `mailto:${emailData.to}?subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(emailData.body)}`;
           window.open(mailtoLink, '_blank');
         }
-        
+
         // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
         this.isSubmitting = false;
         this.showSuccessModal = true;
         this.contactForm.reset();
-        
+
       } catch (error) {
         console.error('Error submitting form:', error);
         this.isSubmitting = false;
@@ -267,15 +272,58 @@ export class HomeComponent implements OnInit {
   getQuote(item: { title?: string }) {
     // Scroll to contact form section for quote request
     this.scrollToSection('contact');
-    
+
     // Pre-fill the event type in the contact form if available
     if (item.title) {
       this.contactForm.patchValue({
         eventType: item.title.toLowerCase().includes('music') ? 'concert' :
-                   item.title.toLowerCase().includes('sport') ? 'sports' :
-                   item.title.toLowerCase().includes('conference') ? 'conference' : 'other',
+          item.title.toLowerCase().includes('sport') ? 'sports' :
+            item.title.toLowerCase().includes('conference') ? 'conference' : 'other',
         message: `I'm interested in getting a quote for an event similar to: ${item.title}`
       });
     }
+  }
+
+  private setupPWAInstall() {
+    if (!this.isBrowser || typeof window === 'undefined') {
+      return;
+    }
+
+    // Listen for the beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      this.deferredPrompt = e;
+      // Show the install button
+      this.showInstallButton = true;
+    });
+
+    // Listen for the app installed event
+    window.addEventListener('appinstalled', () => {
+      // Hide the install button
+      this.showInstallButton = false;
+      this.deferredPrompt = null;
+      console.log('PWA was installed');
+    });
+  }
+
+  installPWA() {
+    if (!this.deferredPrompt) {
+      return;
+    }
+
+    // Show the install prompt
+    this.deferredPrompt.prompt();
+
+    // Wait for the user to respond to the prompt
+    this.deferredPrompt.userChoice.then((choiceResult: any) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      this.deferredPrompt = null;
+    });
   }
 }

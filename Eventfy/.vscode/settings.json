@@ -1,8 +1,11 @@
 {
   "css.validate": false,
   "scss.validate": false,
+  "scss.lint.unknownAtRules": "ignore",
   "less.validate": false,
-  "css.customData": [".vscode/css_custom_data.json"],
+  "css.customData": [
+    ".vscode/css_custom_data.json"
+  ],
   "files.associations": {
     "*.scss": "scss"
   },
@@ -13,7 +16,13 @@
     "scss": "scss"
   },
   "tailwindCSS.experimental.classRegex": [
-    ["@apply\\s+([^;}]+)", "([^;}]+)"],
-    ["classList\\.add\\(([^)]*)\\)", "([^)]*)"]
+    [
+      "@apply\\s+([^;}]+)",
+      "([^;}]+)"
+    ],
+    [
+      "classList\\.add\\(([^)]*)\\)",
+      "([^)]*)"
+    ]
   ]
 }
